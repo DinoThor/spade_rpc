@@ -1,13 +1,13 @@
 import asyncio
 import getpass
-import time
 
 import numpy as np
 import sklearn.datasets
+from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
+from spade_rpc import RPCMixin
 
 import classifiers as clfs
-import spade_rpc
 
 
 def get_dataset(file):
@@ -50,7 +50,7 @@ def divide_dataset(x, y, num):
     return datasets
 
 
-class Client(spade_rpc.rpc.RPCAgent):
+class Client(RPCMixin, Agent):
     async def ask_to(self, JID, x):
         if type(JID) == list:
             tasks = [self.ask_to(jidx, x) for jidx in JID]
@@ -103,7 +103,7 @@ class AskBehaviour(OneShotBehaviour):
         await self.agent.stop()
 
 
-def main(jid, passwd):
+async def main(jid, passwd):
     print("Fetching dataset")
     dataset = sklearn.datasets.fetch_covtype(shuffle=True)
     x, y = load_sklearn_dataset(dataset)
@@ -124,15 +124,8 @@ def main(jid, passwd):
     client.add_behaviour(ab)
 
     print("Predicting")
-    future = client.start()
-    future.result()
-
-    while client.is_alive():
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            client.stop()
-            break
+    await client.start()
+    await ab.join()
 
 
 if __name__ == "__main__":
@@ -141,4 +134,4 @@ if __name__ == "__main__":
     jid = input("JID> ")
     passwd = getpass.getpass()
 
-    main(jid, passwd)
+    asyncio.run(main(jid, passwd))

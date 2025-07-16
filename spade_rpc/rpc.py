@@ -1,13 +1,14 @@
 # -*- coding: utf-8 -*-
-import datetime as dt
-from abc import ABCMeta
-from typing import List, Callable
+from abc import ABCMeta, abstractmethod
+from typing import List
 
-import aioxmpp
-import aioxmpp.rpc.xso as rpc_xso
+from slixmpp import ClientXMPP
+from slixmpp.plugins.xep_0009 import XEP_0009
+from slixmpp.plugins.xep_0009.binding import py2xml, xml2py, fault2xml
+from slixmpp.stanza.iq import Iq
+
 from loguru import logger
 
-Param = Union[int, float, str, bool, dt.datetime, list, dict]
 
 class RPCMixin(metaclass=ABCMeta):
 
@@ -20,84 +21,99 @@ class RPCMixin(metaclass=ABCMeta):
         self.rpc = self.RPCComponent(self.client)
 
     class RPCComponent:
-        type_class = {
-            int: rpc_xso.i4,
-            int: rpc_xso.integer,
-            str: rpc_xso.string,
-            float: rpc_xso.double,
-            str: rpc_xso.base64,
-            bool: rpc_xso.boolean,
-            dt.datetime: rpc_xso.datetime,
-            list: rpc_xso.array,
-            dict: rpc_xso.struct
-        }
-
-        class_type = {v: k for k, v in type_class.items()}
-
         def __init__(self, client):
-            self.client = client
-            self.rpc_client = self.client.summon(aioxmpp.RPCClient)
-            self.rpc_server = self.client.summon(aioxmpp.RPCServer)
+            self._client: ClientXMPP = client
+            self._client.register_plugin('xep_0009')
+            self._rpc_client: XEP_0009 = self._client['xep_0009']
 
-        def parse_param(self, param: Param) -> rpc_xso.Value:
-            if type(param) == list:
-                value = rpc_xso.array(rpc_xso.data([self.parse_param(x) for x in param]))
-            elif type(param) == dict:
-                members = [rpc_xso.member(rpc_xso.name(key), self.parse_param(value)) for key, value in param.items()]
-                value = rpc_xso.struct(members)
-            else:
-                value = self.type_class[type(param)](param)
+            self._client.add_event_handler('jabber_rpc_method_call', self.handle_call)
+            self._client.add_event_handler('jabber_rpc_method_response', self.handle_response)
+            self._client.add_event_handler('jabber_rpc_method_fault', self.handle_fault)
+            self._client.add_event_handler('jabber_rpc_error', self.handle_error)
 
-            return rpc_xso.Value(value)
+            self.methods = {}
+            self.pending_calls = {}
 
-        def parse_params(self, params: List[Param]) -> rpc_xso.Params:
-            return rpc_xso.Params([rpc_xso.Param(self.parse_param(x)) for x in params])
-
-        def get_param(self, xso_param):
-            if type(xso_param) == rpc_xso.array:
-                return [self.get_param(x.value) for x in xso_param.data.data]
-            elif type(xso_param) == rpc_xso.struct:
-                return {member.name.name: self.get_param(member.value.value) for member in xso_param.members}
-            else:
-                return self.class_type[type(xso_param)](xso_param.value)
-
-        def get_params(self, xso_params):
-            return [self.get_param(param.value.value) for param in xso_params.params]
-
-        async def call(self, jid: str, method_name: str, params: List[Param]) -> List[Param]:
+        async def call(self, jid: str, method_name: str, params: List, timeout: int = 10):
             if not isinstance(params, list):
                 params = [params]
 
-            query = rpc_xso.Query(
-                rpc_xso.MethodCall(
-                    rpc_xso.MethodName(method_name),
-                    self.parse_params(params)
-                )
+            call_stanza: Iq = self._rpc_client.make_iq_method_call(
+                pto=jid,
+                pmethod=method_name,
+                params=py2xml(*params)
             )
 
-            response = await self.rpc_client.call_method(aioxmpp.JID.fromstr(jid), query)
-            return self.get_params(response.payload.params)
+            res = await call_stanza.send(timeout=timeout)
+            if type(res) is Iq:
+                fault = res['rpc_query']['method_response'].get_fault()
+                if fault:
+                    logger.error(f"{method_name} not found in {jid} methods registered list")
+                    return None
+                return xml2py(res['rpc_query']['method_response']['params'])
 
-        def register_method(self, handler: Callable[..., List[Param]],
-                            method_name: str,
-                            is_allowed: Optional[Callable[[aioxmpp.JID], bool]] = None):
-            def method_wrapper(stanza):
-                params = self.get_params(stanza.payload.payload.params)
+        async def handle_call(self, iq):
+            try:
+                name = iq['rpc_query']['method_call']['method_name']
+                return self.methods[name](iq)
+            except KeyError:
+                fault = fault2xml({
+                    "code": 404,
+                    "string": "Method not found"
+                })
+                id_ = iq['id']
+                to_ = iq['from']
+                res = self._rpc_client.make_iq_method_response_fault(id_, to_, fault)
+                res.send()
+
+        @abstractmethod
+        async def handle_response(self, iq):
+            """
+            Handles the response received from the client after an RPC request is performed.
+            Used to handle asynchronously the RPC response
+            To override
+            """
+            pass
+
+        @abstractmethod
+        async def handle_fault(self, iq):
+            """
+            Handled a fault response received from the client if it's unable to process our request.
+            To override
+            """
+            pass
+
+        @abstractmethod
+        async def handle_error(self, iq):
+            """
+            Default error
+            To override
+            """
+            pass
+
+        def register_method(self, handler, method_name: str):
+            def method_wrapper(iq):
+                params = iq['rpc_query']['method_call']['params']
+                params = xml2py(params)
+                _id = iq['id']
 
                 response = handler(*params)
 
                 if not isinstance(response, list):
                     response = [response]
 
-                query = rpc_xso.Query(
-                    rpc_xso.MethodResponse(
-                        self.parse_params(response)
-                    )
+                res = self._rpc_client.make_iq_method_response(
+                    pid=_id,
+                    pto=iq['from'],
+                    params=py2xml(*response)
                 )
 
-                return query
+                res.send()
 
-            return self.rpc_server.register_method(method_wrapper, method_name, is_allowed)
+            self.methods[method_name] = method_wrapper
 
         def unregister_method(self, method_name: str):
-            return self.rpc_server.unregister_method(self, method_name)
+            try:
+                self.methods.pop(method_name)
+            except KeyError:
+                logger.warning(f"Unable to unregister {method_name}. There's no method registered with that name")
