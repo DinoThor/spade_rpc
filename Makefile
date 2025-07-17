@@ -47,13 +47,11 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr htmlcov/
 	rm -fr .pytest_cache
 
-lint/flake8: ## check style with flake8
-	flake8 spade_rpc tests
-
-lint: lint/flake8 ## check style
+lint: ## check style with ruff
+	ruff check spade_rpc tests
 
 test: ## run tests quickly with the default Python
-	python setup.py test
+	pytest
 
 test-all: ## run tests on every Python version with tox
 	tox

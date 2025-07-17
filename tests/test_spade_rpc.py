@@ -2,14 +2,36 @@
 
 """Tests for `spade_rpc` package."""
 import pytest
+import pytest_asyncio
+import asyncio
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
+from pyjabber.server import Server
+from pyjabber.server_parameters import Parameters
 
 from spade_rpc import RPCMixin
 
-AGENT_JID = "demo@araylop-vrain/df"
-AGENT2_JID = "test@araylop-vrain/client"
+AGENT_JID = "demo@localhost/df"
+AGENT2_JID = "test@localhost/client"
 PWD = "1234"
+
+@pytest_asyncio.fixture(scope="function")
+def event_loop():
+    loop = asyncio.new_event_loop()
+    yield loop
+    loop.close()
+
+
+@pytest_asyncio.fixture(autouse=True, scope="function")
+async def server(event_loop):
+    server = Server(Parameters(database_in_memory=True))
+    task = event_loop.create_task(server.start())
+    yield task
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 @pytest.mark.asyncio
