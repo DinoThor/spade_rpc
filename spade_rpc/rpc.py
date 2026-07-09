@@ -45,28 +45,29 @@ class RPCMixin(metaclass=ABCMeta):
             )
 
             res = await call_stanza.send(timeout=timeout)
-            if type(res) is Iq:
+            if isinstance(res, Iq):
                 fault = res["rpc_query"]["method_response"].get_fault()
-                if fault:
-                    logger.error(
-                        f"{method_name} not found in {jid} methods registered list"
-                    )
-                    return None
-                return xml2py(res["rpc_query"]["method_response"]["params"])
+                if fault is None:
+                    return xml2py(res["rpc_query"]["method_response"]["params"])
 
-        async def handle_call(self, iq):
+                logger.error(
+                    f"{method_name} not found in {jid} methods registered list"
+                )
+            return None
+
+        async def handle_call(self, iq: Iq):
             try:
                 name = iq["rpc_query"]["method_call"]["method_name"]
                 return self.methods[name](iq)
             except KeyError:
-                fault = fault2xml({"code": 404, "string": "Method not found"})
-                id_ = iq["id"]
-                to_ = iq["from"]
-                res = self._rpc_client.make_iq_method_response_fault(id_, to_, fault)
-                res.send()
+                if iq["to"] is not None:
+                    fault = fault2xml({"code": 404, "string": "Method not found"})
+                    res = self._rpc_client.make_iq_method_response_fault(
+                        pid=iq["id"], pto=iq["to"], params=fault
+                    )
+                    res.send()
 
-        @abstractmethod
-        async def handle_response(self, iq):
+        async def handle_response(self, iq): #pragma: no cover
             """
             Handles the response received from the client after an RPC request is performed.
             Used to handle asynchronously the RPC response
@@ -74,16 +75,14 @@ class RPCMixin(metaclass=ABCMeta):
             """
             pass
 
-        @abstractmethod
-        async def handle_fault(self, iq):
+        async def handle_fault(self, iq): #pragma: no cover
             """
             Handled a fault response received from the client if it's unable to process our request.
             To override
             """
             pass
 
-        @abstractmethod
-        async def handle_error(self, iq):
+        async def handle_error(self, iq): #pragma: no cover
             """
             Default error
             To override
@@ -92,10 +91,7 @@ class RPCMixin(metaclass=ABCMeta):
 
         def register_method(self, handler, method_name: str):
             def method_wrapper(iq):
-                params = iq["rpc_query"]["method_call"]["params"]
-                params = xml2py(params)
-                _id = iq["id"]
-
+                params = xml2py(iq["rpc_query"]["method_call"]["params"])
                 response = handler(*params)
 
                 if not isinstance(response, list):
