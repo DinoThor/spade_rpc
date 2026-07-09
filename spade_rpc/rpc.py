@@ -21,16 +21,15 @@ class RPCMixin(metaclass=ABCMeta):
 
     class RPCComponent:
         def __init__(self, client):
-            self._client: ClientXMPP = client
-            self._client.register_plugin("xep_0009")
-            self._rpc_client: XEP_0009 = self._client["xep_0009"]
+            client.register_plugin("xep_0009")
+            self._rpc_client: XEP_0009 = client["xep_0009"]
 
-            self._client.add_event_handler("jabber_rpc_method_call", self.handle_call)
-            self._client.add_event_handler(
+            client.add_event_handler("jabber_rpc_method_call", self.handle_call)
+            client.add_event_handler(
                 "jabber_rpc_method_response", self.handle_response
             )
-            self._client.add_event_handler("jabber_rpc_method_fault", self.handle_fault)
-            self._client.add_event_handler("jabber_rpc_error", self.handle_error)
+            client.add_event_handler("jabber_rpc_method_fault", self.handle_fault)
+            client.add_event_handler("jabber_rpc_error", self.handle_error)
 
             self.methods = {}
             self.pending_calls = {}
