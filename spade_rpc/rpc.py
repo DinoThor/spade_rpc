@@ -98,7 +98,7 @@ class RPCMixin(metaclass=ABCMeta):
                     response = [response]
 
                 res = self._rpc_client.make_iq_method_response(
-                    pid=_id, pto=iq["from"], params=py2xml(*response)
+                    pid=iq["id"], pto=iq["from"], params=py2xml(*response)
                 )
 
                 res.send()
