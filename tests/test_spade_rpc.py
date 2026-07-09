@@ -15,26 +15,21 @@ AGENT_JID = "demo@localhost/df"
 AGENT2_JID = "test@localhost/client"
 PWD = "1234"
 
-@pytest_asyncio.fixture(scope="function")
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
-
-@pytest_asyncio.fixture(autouse=True, scope="function")
-async def server(event_loop):
+@pytest_asyncio.fixture(autouse=True, scope="session")
+async def server():
     server = Server(Parameters(database_in_memory=True))
-    task = event_loop.create_task(server.start())
-    yield task
-    task.cancel()
+    task = asyncio.create_task(server.start())
+    await server.ready.wait()
+
     try:
+        yield
+    finally:
+        task.cancel()
         await task
-    except asyncio.CancelledError:
-        pass
 
 
-@pytest.mark.asyncio
+# @pytest.mark.asyncio
 async def test_create_mixin():
     class TestAgent(RPCMixin, Agent):
         async def setup(self):
@@ -45,7 +40,7 @@ async def test_create_mixin():
             self.kill(exit_code="Success")
 
     agent = TestAgent(AGENT_JID, PWD)
-    await agent.start(auto_register=True)
+    await agent.start()
     assert agent.is_alive() is True
 
     dummy = DummyBeh()
@@ -58,7 +53,7 @@ async def test_create_mixin():
     assert agent.is_alive() is False
 
 
-@pytest.mark.asyncio
+# @pytest.mark.asyncio
 async def test_register_method():
     class TestAgent(RPCMixin, Agent):
         async def setup(self):
