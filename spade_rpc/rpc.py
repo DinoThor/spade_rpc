@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
-from abc import ABCMeta, abstractmethod
+from abc import ABCMeta
 from typing import List
 
-from slixmpp import ClientXMPP
 from slixmpp.plugins.xep_0009 import XEP_0009
 from slixmpp.plugins.xep_0009.binding import py2xml, xml2py, fault2xml
 from slixmpp.stanza.iq import Iq
