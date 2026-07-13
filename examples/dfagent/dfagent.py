@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 import aioxmpp.rpc.xso as rpc_xso
-from spade_rpc import RPCAgent
+from spade.agent import Agent
 
-class DFAgent(RPCAgent):
+from spade_rpc import RPCMixin
+
+
+class DFAgent(Agent, RPCMixin):
     def __init__(self, jid: str, password: str, *args, **kwargs):
         super().__init__(jid, password, *args, **kwargs)
         self.jid_directory = {}
         self.method_directory = {}
 
-    async def setup(self):    
+    async def setup(self):
         def register_method(stanza):
             params = self.rpc.get_params(stanza.payload.payload.params)
             method_name = params[0]
@@ -42,7 +45,7 @@ class DFAgent(RPCAgent):
 
             if method_name in self.method_directory:
                 self.method_directory[method_name].remove(jid)
-            
+
             query = rpc_xso.Query(
                 rpc_xso.MethodResponse(
                     rpc_xso.Params([
@@ -52,7 +55,7 @@ class DFAgent(RPCAgent):
             )
 
             return query
-    
+
         def list_methods(jid):
             if jid in self.jid_directory:
                 return self.jid_directory[jid]

@@ -4,14 +4,15 @@ import time
 from spade.behaviour import OneShotBehaviour
 import getpass
 
+
 class AskBehaviour(OneShotBehaviour):
     def __init__(self, dfagent_jid):
         super().__init__()
         self.dfagent_jid = dfagent_jid
 
     async def run(self):
-        await self.agent.rpc.call_method(self.dfagent_jid , 'register_method', 'foo')
-        await self.agent.rpc.call_method(self.dfagent_jid , 'register_method', 'bar')
+        await self.agent.rpc.call_method(self.dfagent_jid, 'register_method', 'foo')
+        await self.agent.rpc.call_method(self.dfagent_jid, 'register_method', 'bar')
         methods = await self.agent.rpc.call_method(self.dfagent_jid, 'list_methods', str(self.agent.jid))
         jids = await self.agent.rpc.call_method(self.dfagent_jid, 'list_jids', 'foo')
 
@@ -19,6 +20,7 @@ class AskBehaviour(OneShotBehaviour):
         print(jids)
 
         await self.agent.stop()
+
 
 def main(jid, passwd):
     dfagent_jid = jid + '/df'
@@ -41,8 +43,9 @@ def main(jid, passwd):
         try:
             time.sleep(1)
         except KeyboardInterrupt:
-            testclient.stop()            
+            testclient.stop()
             break
+
 
 if __name__ == "__main__":
     jid = input("JID> ")

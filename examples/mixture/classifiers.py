@@ -1,9 +1,12 @@
-import spade_rpc
 import random
 
-class AgentClassifier(spade_rpc.rpc.RPCAgent):
-    def __init__(self, jid, passwd):
-        super().__init__(jid, passwd)
+import sklearn.gaussian_process
+from spade.agent import Agent
+
+from spade_rpc.rpc import RPCMixin
+
+
+class AgentClassifier(RPCMixin, Agent):
 
     async def setup(self):
         def predict(*x):
@@ -12,10 +15,11 @@ class AgentClassifier(spade_rpc.rpc.RPCAgent):
 
         self.rpc.register_method(predict, 'predict')
 
+
 def register_classifier(jid, passwd, classifier, training_data):
     classifier.fit(*training_data)
     classifier_name = type(classifier).__name__
-    classifier_jid = '{}/{}{}'.format(jid, classifier_name, random.randint(0,1000))
+    classifier_jid = '{}/{}{}'.format(jid, classifier_name, random.randint(0, 1000))
 
     agent_classifier = AgentClassifier(classifier_jid, passwd)
     future = agent_classifier.start()
@@ -25,6 +29,7 @@ def register_classifier(jid, passwd, classifier, training_data):
 
     return classifier_jid
 
+
 def register_classifiers(jid, passwd, classifiers, training_data):
     method_classifiers = classifiers.copy()
 
@@ -32,14 +37,6 @@ def register_classifiers(jid, passwd, classifiers, training_data):
 
     return classifiers_jids
 
-import sklearn
-import sklearn.neighbors 
-import sklearn.neural_network 
-import sklearn.svm
-import sklearn.ensemble
-import sklearn.naive_bayes
-import sklearn.discriminant_analysis
-import sklearn.gaussian_process
 
 '''
 classifiers = [

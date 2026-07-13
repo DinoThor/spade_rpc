@@ -26,7 +26,9 @@ Plugin for SPADE platform to implement rpc protocol on agents
 Features
 --------
 
-* TODO
+* Call a service provided by another agent.
+* Serve a custom service to be consumed by other agents.
+* Uses the XEP-0009: Jabber-RPC.
 
 Credits
 -------

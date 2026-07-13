@@ -1,13 +1,14 @@
-from spade.behaviour import OneShotBehaviour
-import spade_rpc
-
-import classifiers as clfs
-import sklearn.datasets
-
-import numpy as np
-import time
 import asyncio
 import getpass
+
+import numpy as np
+import sklearn.datasets
+from spade.agent import Agent
+from spade.behaviour import OneShotBehaviour
+from spade_rpc import RPCMixin
+
+import classifiers as clfs
+
 
 def get_dataset(file):
     file = open(file, 'r')
@@ -17,6 +18,7 @@ def get_dataset(file):
     y = np.asarray([x[4][:-1] for x in dataset])
 
     return x.tolist(), y.tolist()
+
 
 def split_dataset(x, y, num_test=100):
     train_len = len(x) - num_test
@@ -28,29 +30,33 @@ def split_dataset(x, y, num_test=100):
 
     return (x_train.tolist(), y_train.tolist()), (x_test.tolist(), y_test.tolist())
 
+
 def load_sklearn_dataset(dataset):
     x, y = dataset.data, dataset.target
 
     return x, y
 
+
 def divide_dataset(x, y, num):
-    n = int(len(x)/num)
+    n = int(len(x) / num)
 
     datasets = []
     for i in range(num):
-        x_split = x[i*n:i*n+n]
-        y_split = y[i*n:i*n+n]
+        x_split = x[i * n:i * n + n]
+        y_split = y[i * n:i * n + n]
 
         datasets.append([x_split, y_split])
 
     return datasets
 
-class Client(spade_rpc.rpc.RPCAgent):
+
+class Client(RPCMixin, Agent):
     async def ask_to(self, JID, x):
         if type(JID) == list:
             tasks = [self.ask_to(jidx, x) for jidx in JID]
             return await asyncio.gather(*tasks)
         return await self.rpc.call_method(JID, 'predict', x)
+
 
 class AskBehaviour(OneShotBehaviour):
     def __init__(self, classifiers_jids, x, y):
@@ -68,7 +74,7 @@ class AskBehaviour(OneShotBehaviour):
         classifiers_ok = [0 for _ in range(len(self.classifiers_jids))]
 
         for i in range(predictions.shape[-1]):
-            results = predictions[:,i]
+            results = predictions[:, i]
             groundtruth = self.y[i]
 
             values, counts = np.unique(results, return_counts=True)
@@ -87,17 +93,17 @@ class AskBehaviour(OneShotBehaviour):
 
             if values[ind] == groundtruth:
                 total_ok += 1
-        
+
         print('---------------------------')
         print('global accuracy: {}'.format(global_ok / (len(self.classifiers_jids) * predictions.shape[-1])))
         print('pooling accuracy: {}'.format(total_ok / predictions.shape[-1]))
         for i, classifier in enumerate(self.classifiers_jids):
             print('{} accuracy: {}'.format(classifier, classifiers_ok[i] / predictions.shape[-1]))
 
-
         await self.agent.stop()
 
-def main(jid, passwd):
+
+async def main(jid, passwd):
     print("Fetching dataset")
     dataset = sklearn.datasets.fetch_covtype(shuffle=True)
     x, y = load_sklearn_dataset(dataset)
@@ -108,7 +114,8 @@ def main(jid, passwd):
     divided_dataset = divide_dataset(x_train, y_train, len(clfs.classifiers))
 
     print("Creating and training classifiers")
-    classifiers = [clfs.register_classifier(jid, passwd, classifier, training_data) for classifier, training_data in zip(clfs.classifiers, divided_dataset)]
+    classifiers = [clfs.register_classifier(jid, passwd, classifier, training_data) for classifier, training_data in
+                   zip(clfs.classifiers, divided_dataset)]
 
     client = Client("{}/client".format(jid), passwd)
 
@@ -117,20 +124,14 @@ def main(jid, passwd):
     client.add_behaviour(ab)
 
     print("Predicting")
-    future = client.start()
-    future.result()
+    await client.start()
+    await ab.join()
 
-    while client.is_alive():
-        try:
-            time.sleep(1)
-        except KeyboardInterrupt:
-            client.stop()            
-            break
-    
+
 if __name__ == "__main__":
     np.random.seed(722)
 
     jid = input("JID> ")
     passwd = getpass.getpass()
-    
-    main(jid, passwd)
+
+    asyncio.run(main(jid, passwd))

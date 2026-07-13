@@ -5,7 +5,8 @@ Credits
 Development Lead
 ----------------
 
-* spade-rpc <n.garcia.sastre@gmail.com>
+* Niko <https://github.com/NikoConn>
+* Javi Palanca <https://github.com/javipalanca>
 
 Contributors
 ------------
