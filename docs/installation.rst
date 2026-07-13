@@ -1,51 +1,39 @@
-.. highlight:: shell
-
-============
 Installation
 ============
 
+You can install the package using ``uv``, which is the recommended modern approach for fast, reliable dependency management. Alternatively, you can use ``pip`` for legacy support.
 
-Stable release
---------------
+Using UV (Recommended)
+--------------------------
 
-To install spade_rpc, run this command in your terminal:
+To install the package into your current environment using ``uv``, run:
 
-.. code-block:: console
+.. code-block:: bash
 
-    $ pip install spade_rpc
+   uv pip install package-name
 
-This is the preferred method to install spade_rpc, as it will always install the most recent stable release.
+If you want to create a new project and add the package as a dependency, use:
 
-If you don't have `pip`_ installed, this `Python installation guide`_ can guide
-you through the process.
+.. code-block:: bash
 
-.. _pip: https://pip.pypa.io
-.. _Python installation guide: http://docs.python-guide.org/en/latest/starting/installation/
+   uv add package-name
 
+Legacy Installation (pip)
+-------------------------
 
-From sources
-------------
+If you prefer or require the traditional approach, you can install the package using ``pip``.
 
-The sources for spade_rpc can be downloaded from the `Github repo`_.
+.. warning::
+   Using ``uv`` is recommended for significantly faster resolution and installation. If you use ``pip``, ensure your environment is properly activated.
 
-You can either clone the public repository:
+To install using ``pip``:
 
-.. code-block:: console
+.. code-block:: bash
 
-    $ git clone git://github.com/NikoConn/spade_rpc
+   pip install package-name
 
-Or download the `tarball`_:
+For development environments, you may also use:
 
-.. code-block:: console
+.. code-block:: bash
 
-    $ curl -OJL https://github.com/NikoConn/spade_rpc/tarball/master
-
-Once you have a copy of the source, you can install it with:
-
-.. code-block:: console
-
-    $ python setup.py install
-
-
-.. _Github repo: https://github.com/NikoConn/spade_rpc
-.. _tarball: https://github.com/NikoConn/spade_rpc/tarball/master
+   pip install -e .

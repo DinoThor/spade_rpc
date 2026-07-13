@@ -1,4 +1,4 @@
-Welcome to spade_rpc's documentation!
+Welcome to SPADE RPC's documentation!
 ======================================
 
 .. toctree::
