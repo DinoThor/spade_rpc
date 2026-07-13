@@ -64,11 +64,10 @@ docs = [
 
 [tool.setuptools]
 packages = ["spade_rpc"]
-include-package-data = true
+#include-package-data = true
 
 [tool.setuptools.dynamic]
 version = {attr = "spade_rpc.__version__"}
-dependencies = {file = ["requirements.txt"]}
 
 [tool.ruff]
 lint.select = ["E", "F"]
