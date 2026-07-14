@@ -20,14 +20,15 @@ class RPCMixin(metaclass=ABCMeta):
 
     class RPCComponent:
         def __init__(self, client):
-            self._client: ClientXMPP = client
-            self._client.register_plugin('xep_0009')
-            self._rpc_client: XEP_0009 = self._client['xep_0009']
+            client.register_plugin("xep_0009")
+            self._rpc_client: XEP_0009 = client["xep_0009"]
 
-            self._client.add_event_handler('jabber_rpc_method_call', self.handle_call)
-            self._client.add_event_handler('jabber_rpc_method_response', self.handle_response)
-            self._client.add_event_handler('jabber_rpc_method_fault', self.handle_fault)
-            self._client.add_event_handler('jabber_rpc_error', self.handle_error)
+            client.add_event_handler("jabber_rpc_method_call", self.handle_call)
+            client.add_event_handler(
+                "jabber_rpc_method_response", self.handle_response
+            )
+            client.add_event_handler("jabber_rpc_method_fault", self.handle_fault)
+            client.add_event_handler("jabber_rpc_error", self.handle_error)
 
             self.methods = {}
             self.pending_calls = {}
@@ -43,26 +44,27 @@ class RPCMixin(metaclass=ABCMeta):
             )
 
             res = await call_stanza.send(timeout=timeout)
-            if type(res) is Iq:
-                fault = res['rpc_query']['method_response'].get_fault()
-                if fault:
-                    logger.error(f"{method_name} not found in {jid} methods registered list")
-                    return None
-                return xml2py(res['rpc_query']['method_response']['params'])
+            if isinstance(res, Iq):
+                fault = res["rpc_query"]["method_response"].get_fault()
+                if fault is None:
+                    return xml2py(res["rpc_query"]["method_response"]["params"])
+
+                logger.error(
+                    f"{method_name} not found in {jid} methods registered list"
+                )
+            return None
 
         async def handle_call(self, iq: Iq):
             try:
                 name = iq["rpc_query"]["method_call"]["method_name"]
                 return self.methods[name](iq)
             except KeyError:
-                fault = fault2xml({
-                    "code": 404,
-                    "string": "Method not found"
-                })
-                id_ = iq['id']
-                to_ = iq['from']
-                res = self._rpc_client.make_iq_method_response_fault(id_, to_, fault)
-                res.send()
+                if iq["to"] is not None:
+                    fault = fault2xml({"code": 404, "string": "Method not found"})
+                    res = self._rpc_client.make_iq_method_response_fault(
+                        pid=iq["id"], pto=iq["to"], params=fault
+                    )
+                    res.send()
 
         async def handle_response(self, iq): #pragma: no cover
             """
@@ -88,19 +90,14 @@ class RPCMixin(metaclass=ABCMeta):
 
         def register_method(self, handler, method_name: str):
             def method_wrapper(iq):
-                params = iq['rpc_query']['method_call']['params']
-                params = xml2py(params)
-                _id = iq['id']
-
+                params = xml2py(iq["rpc_query"]["method_call"]["params"])
                 response = handler(*params)
 
                 if not isinstance(response, list):
                     response = [response]
 
                 res = self._rpc_client.make_iq_method_response(
-                    pid=_id,
-                    pto=iq['from'],
-                    params=py2xml(*response)
+                    pid=iq["id"], pto=iq["from"], params=py2xml(*response)
                 )
 
                 res.send()
