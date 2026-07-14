@@ -27,9 +27,9 @@ class DFAgent(Agent, RPCMixin):
 
             query = rpc_xso.Query(
                 rpc_xso.MethodResponse(
-                    rpc_xso.Params([
-                        rpc_xso.Param(rpc_xso.Value(rpc_xso.boolean(True)))
-                    ])
+                    rpc_xso.Params(
+                        [rpc_xso.Param(rpc_xso.Value(rpc_xso.boolean(True)))]
+                    )
                 )
             )
 
@@ -48,9 +48,9 @@ class DFAgent(Agent, RPCMixin):
 
             query = rpc_xso.Query(
                 rpc_xso.MethodResponse(
-                    rpc_xso.Params([
-                        rpc_xso.Param(rpc_xso.Value(rpc_xso.boolean(True)))
-                    ])
+                    rpc_xso.Params(
+                        [rpc_xso.Param(rpc_xso.Value(rpc_xso.boolean(True)))]
+                    )
                 )
             )
 
@@ -68,7 +68,7 @@ class DFAgent(Agent, RPCMixin):
             else:
                 return False
 
-        self.rpc.rpc_server.register_method(register_method, 'register_method')
-        self.rpc.rpc_server.register_method(unregister_method, 'unregister_method')
-        self.rpc.register_method(list_methods, 'list_methods')
-        self.rpc.register_method(list_jids, 'list_jids')
+        self.rpc.rpc_server.register_method(register_method, "register_method")
+        self.rpc.rpc_server.register_method(unregister_method, "unregister_method")
+        self.rpc.register_method(list_methods, "list_methods")
+        self.rpc.register_method(list_jids, "list_jids")

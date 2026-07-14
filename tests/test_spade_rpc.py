@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 """Tests for `spade_rpc` package."""
+
 import pytest
 from spade.agent import Agent
 from spade.behaviour import OneShotBehaviour
@@ -51,7 +52,7 @@ async def test_register_method():
             self.agent_jid = agent_jid
 
         async def run(self):
-            result = await self.agent.rpc.call(self.agent_jid, 'sum', [3, 5])
+            result = await self.agent.rpc.call(self.agent_jid, "sum", [3, 5])
             self.kill(exit_code=result[0])
 
     class ClientAgent(RPCMixin, Agent):
@@ -91,7 +92,7 @@ async def test_missing_method():
             self.agent_jid = agent_jid
 
         async def run(self):
-            result = await self.agent.rpc.call(self.agent_jid, 'sum2', [3, 5])
+            result = await self.agent.rpc.call(self.agent_jid, "sum2", [3, 5])
             if result:
                 self.kill(exit_code=result[0])
 
@@ -115,4 +116,3 @@ async def test_missing_method():
 
     await agent.stop()
     assert agent.is_alive() is False
-

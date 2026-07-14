@@ -11,10 +11,12 @@ class AskBehaviour(OneShotBehaviour):
         self.dfagent_jid = dfagent_jid
 
     async def run(self):
-        await self.agent.rpc.call_method(self.dfagent_jid, 'register_method', 'foo')
-        await self.agent.rpc.call_method(self.dfagent_jid, 'register_method', 'bar')
-        methods = await self.agent.rpc.call_method(self.dfagent_jid, 'list_methods', str(self.agent.jid))
-        jids = await self.agent.rpc.call_method(self.dfagent_jid, 'list_jids', 'foo')
+        await self.agent.rpc.call_method(self.dfagent_jid, "register_method", "foo")
+        await self.agent.rpc.call_method(self.dfagent_jid, "register_method", "bar")
+        methods = await self.agent.rpc.call_method(
+            self.dfagent_jid, "list_methods", str(self.agent.jid)
+        )
+        jids = await self.agent.rpc.call_method(self.dfagent_jid, "list_jids", "foo")
 
         print(methods)
         print(jids)
@@ -23,14 +25,14 @@ class AskBehaviour(OneShotBehaviour):
 
 
 def main(jid, passwd):
-    dfagent_jid = jid + '/df'
+    dfagent_jid = jid + "/df"
 
     dfagent = DFAgent(dfagent_jid, passwd)
     future = dfagent.start()
     future.result()
 
     for i in range(5):
-        testclient = RPCAgent('{}/test{}'.format(jid, str(i)), passwd)
+        testclient = RPCAgent("{}/test{}".format(jid, str(i)), passwd)
 
         ab = AskBehaviour(dfagent_jid)
         ab.set_agent(testclient)

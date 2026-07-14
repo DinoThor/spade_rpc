@@ -11,9 +11,9 @@ import classifiers as clfs
 
 
 def get_dataset(file):
-    file = open(file, 'r')
+    file = open(file, "r")
 
-    dataset = [x.split(',') for x in file][:-1]
+    dataset = [x.split(",") for x in file][:-1]
     x = np.double([x[0:3] for x in dataset])
     y = np.asarray([x[4][:-1] for x in dataset])
 
@@ -42,8 +42,8 @@ def divide_dataset(x, y, num):
 
     datasets = []
     for i in range(num):
-        x_split = x[i * n:i * n + n]
-        y_split = y[i * n:i * n + n]
+        x_split = x[i * n : i * n + n]
+        y_split = y[i * n : i * n + n]
 
         datasets.append([x_split, y_split])
 
@@ -52,10 +52,10 @@ def divide_dataset(x, y, num):
 
 class Client(RPCMixin, Agent):
     async def ask_to(self, JID, x):
-        if type(JID) == list:
+        if isinstance(list, JID):
             tasks = [self.ask_to(jidx, x) for jidx in JID]
             return await asyncio.gather(*tasks)
-        return await self.rpc.call_method(JID, 'predict', x)
+        return await self.rpc.call_method(JID, "predict", x)
 
 
 class AskBehaviour(OneShotBehaviour):
@@ -80,11 +80,11 @@ class AskBehaviour(OneShotBehaviour):
             values, counts = np.unique(results, return_counts=True)
             ind = np.argmax(counts)
 
-            print('Asked: {}'.format(self.x[0][i]))
-            print('Predictions: {}'.format(results))
-            print('Most common prediction: {}'.format(values[ind]))
-            print('Groundtruth: {}'.format(groundtruth))
-            print('')
+            print("Asked: {}".format(self.x[0][i]))
+            print("Predictions: {}".format(results))
+            print("Most common prediction: {}".format(values[ind]))
+            print("Groundtruth: {}".format(groundtruth))
+            print("")
 
             for i_classifier, result in enumerate(results):
                 if result == groundtruth:
@@ -94,11 +94,19 @@ class AskBehaviour(OneShotBehaviour):
             if values[ind] == groundtruth:
                 total_ok += 1
 
-        print('---------------------------')
-        print('global accuracy: {}'.format(global_ok / (len(self.classifiers_jids) * predictions.shape[-1])))
-        print('pooling accuracy: {}'.format(total_ok / predictions.shape[-1]))
+        print("---------------------------")
+        print(
+            "global accuracy: {}".format(
+                global_ok / (len(self.classifiers_jids) * predictions.shape[-1])
+            )
+        )
+        print("pooling accuracy: {}".format(total_ok / predictions.shape[-1]))
         for i, classifier in enumerate(self.classifiers_jids):
-            print('{} accuracy: {}'.format(classifier, classifiers_ok[i] / predictions.shape[-1]))
+            print(
+                "{} accuracy: {}".format(
+                    classifier, classifiers_ok[i] / predictions.shape[-1]
+                )
+            )
 
         await self.agent.stop()
 
@@ -114,8 +122,10 @@ async def main(jid, passwd):
     divided_dataset = divide_dataset(x_train, y_train, len(clfs.classifiers))
 
     print("Creating and training classifiers")
-    classifiers = [clfs.register_classifier(jid, passwd, classifier, training_data) for classifier, training_data in
-                   zip(clfs.classifiers, divided_dataset)]
+    classifiers = [
+        clfs.register_classifier(jid, passwd, classifier, training_data)
+        for classifier, training_data in zip(clfs.classifiers, divided_dataset)
+    ]
 
     client = Client("{}/client".format(jid), passwd)
 
