@@ -1,5 +1,5 @@
 =========
-spade_rpc
+SPADE RPC
 =========
 
 
