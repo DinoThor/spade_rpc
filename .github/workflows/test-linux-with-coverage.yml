@@ -36,5 +36,6 @@ jobs:
       with:
         parallel: true
         flag-name: Unit Test
+        base-path: ..
     - name: Send coverage report to codecov
       uses: codecov/codecov-action@v5
