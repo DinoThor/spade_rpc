@@ -29,7 +29,6 @@ async def server():
         await task
 
 
-# @pytest.mark.asyncio
 async def test_create_mixin():
     class TestAgent(RPCMixin, Agent):
         async def setup(self):
@@ -53,7 +52,7 @@ async def test_create_mixin():
     assert agent.is_alive() is False
 
 
-# @pytest.mark.asyncio
+@pytest.mark.skip(reason="Need to fix RPC on PyJabber Server")
 async def test_register_method():
     class TestAgent(RPCMixin, Agent):
         async def setup(self):
@@ -93,7 +92,7 @@ async def test_register_method():
     assert agent.is_alive() is False
 
 
-@pytest.mark.asyncio
+@pytest.mark.skip(reason="Need to fix RPC on PyJabber Server")
 async def test_missing_method():
     class TestAgent(RPCMixin, Agent):
         async def setup(self):
